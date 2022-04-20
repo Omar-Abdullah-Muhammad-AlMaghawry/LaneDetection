@@ -26,6 +26,64 @@ from moviepy.editor import VideoFileClip
 from IPython.display import HTML
 
 
+def binary_warper(img):
+    # These are the arrays I calculated using cv2.calibrateCamera()
+    dist_pickle = pickle.load(open("camera_cal/wide_dist_pickle.p", "rb"))
+    mtx = dist_pickle["mtx"]
+    dist = dist_pickle["dist"]
+
+    # Use the OpenCV undistort() function to remove distortion
+    undist = cv2.undistort(img, mtx, dist, None, mtx)
+    # undist = undistort_camera(img, calib_params)   
+    # Grab the image shape
+    img_size = (img.shape[1], img.shape[0])
+    # create src and dst matrices for perspective transformation 
+    src = np.float32([[(0, img_size[1]), (490, 480), (820, 480), (img_size[0],img_size[1])]])
+    dst = np.float32([[(0,img_size[1]), (0, 0), (img_size[0], 0), (img_size[0],img_size[1])]])
+    # Given src and dst points, calculate the perspective transform matrix
+    M = cv2.getPerspectiveTransform(src, dst)
+    Minv = cv2.getPerspectiveTransform(dst, src)
+    # Warp the image using OpenCV warpPerspective()
+    warped = cv2.warpPerspective(undist, M, img_size)
+    
+    intense = np.sum(warped)
+
+    # binary thresholding with LAB color space using B channel
+    lab = cv2.cvtColor(warped, cv2.COLOR_RGB2Lab)
+    b_channel = lab[:,:,2]
+    if intense > 400012823:
+        b_thresh_min = 230
+        b_thresh_max = 250
+    elif intense < 110012823:
+        b_thresh_min = 70
+        b_thresh_max = 150
+    else : 
+        b_thresh_min = 140
+        b_thresh_max = 200
+    b_binary = np.zeros_like(b_channel)
+    b_binary[(b_channel >= b_thresh_min) & (b_channel <= b_thresh_max)] = 1
+        
+    # binary thresholding with LUV color space using L channel
+    luv = cv2.cvtColor(warped, cv2.COLOR_RGB2LUV)
+    l_channel = luv[:,:,0]
+    if intense > 390012823:
+        l_thresh_min = 230
+        l_thresh_max = 250
+    elif intense < 110012823:
+        l_thresh_min = 110
+        l_thresh_max = 180
+    else :   
+        l_thresh_min = 190
+        l_thresh_max = 255
+    l_binary = np.zeros_like(l_channel)
+    l_binary[(l_channel >= l_thresh_min) & (l_channel <= l_thresh_max)] = 1
+    
+    # Combine the two binary thresholds
+    combined_binary = np.zeros_like(b_binary)
+    combined_binary[(b_binary == 1) | (l_binary == 1)] = 1
+        
+    return combined_binary, Minv, undist, warped 
+
 class Lane():
     def __init__(self):
         self.left_fitx = None
