@@ -20,6 +20,7 @@ import numpy as np
 import cv2
 import glob
 import matplotlib.pyplot as plt
+import pickle
 
 # Import everything needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
