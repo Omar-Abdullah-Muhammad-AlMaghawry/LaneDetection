@@ -9,7 +9,7 @@ pip install functools
 pip install moviepy
 
 
-python3 lane_detection.py $1 $2 $3
+python3 laneDetection.py $1 $2 $3
 
     
 
