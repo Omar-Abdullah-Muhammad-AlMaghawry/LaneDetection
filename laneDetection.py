@@ -40,6 +40,51 @@ class Lane():
         self.ym_per_pix = 30/720 # meters per pixel in y dimension
         self.xm_per_pix = 3.7/700 # meters per pixel in x dimension
         self.out_img=None
+    def measure_curvature(self):
+        # We'll choose the maximum y-value, corresponding to the bottom of the image
+        y_eval = np.max(self.ploty)
+
+        # Calculation of R_curve (radius of curvature)
+        left_curverad = ((1 + (2*self.left_fit[0]*y_eval*self.ym_per_pix + self.left_fit[1])**2)**1.5) / abs(2*self.left_fit[0])
+        right_curverad = ((1 + (2*self.right_fit[0]*y_eval*self.ym_per_pix + self.right_fit[1])**2)**1.5) / abs(2*self.right_fit[0])
+        
+        return left_curverad, right_curverad
+    
+    def fit_poly(self, img_shape, leftx, lefty, rightx, righty):
+        # set detected false, only set it true if polynomials are fitted
+        self.detected = False
+        # return if no left line or right line is detected and use previous fitted polynomials
+        if len(leftx) == 0 or len(rightx) == 0: return
+         ### Fit a second order polynomial to each with np.polyfit() ###
+        self.left_fit = np.polyfit(lefty, leftx, 2)
+        self.right_fit = np.polyfit(righty, rightx, 2)
+        # Generate x and y values for plotting
+        self.ploty = np.linspace(0, img_shape[0]-1, img_shape[0])
+        # cal curvature
+        left_curverad, right_curverad = self.measure_curvature()
+        
+        ### Calc both polynomials using ploty, left_fit and right_fit ###
+        left_fitx = self.left_fit[0]*self.ploty**2 + self.left_fit[1]*self.ploty + self.left_fit[2]
+        right_fitx = self.right_fit[0]*self.ploty**2 + self.right_fit[1]*self.ploty + self.right_fit[2]
+        
+        # calc average distance
+        avg_distance = abs(np.mean(left_fitx) - np.mean(right_fitx))
+        if self.avg_distance is not None:
+            # means it not first frame
+            diff_curv = abs(left_curverad - right_curverad)
+            if diff_curv > 4000:
+                return # if difference in curvatures is greater than 4 km don't fit polynomials
+            distance_diff = abs(avg_distance - self.avg_distance)
+            if distance_diff > 100: # if difference in pass and present avg distance is greater than 100 px don't fit polynomials
+                return
+        self.out_img[lefty, leftx] = [255, 0, 0]
+        self.out_img[righty, rightx] = [0, 0, 255]
+        self.left_curverad = left_curverad
+        self.right_curverad = right_curverad
+        self.left_fitx = left_fitx
+        self.right_fitx = right_fitx
+        self.detected = True # line detected
+        self.avg_distance = avg_distance
      
     def find_lane_pixels(self, binary_warped):
         
@@ -180,7 +225,36 @@ def merge_image(background, overlay, x, y):
         ##################################################
 def process_image(self, img):
 ########### PUT FULL FUNCTION
-    
+        warped, Minv, undist, w = binary_warper(img)
+        if self.detected:
+            # if lines are detected in past frame use those for fitting new polynomials
+            self.search_around_poly(warped)
+        else:
+            # otherwise calculate new polynomials from scratch
+            self.find_lane_pixels(warped)
+        # if nothing is fitted then return the undistored image
+        if self.left_fitx is None or self.right_fitx is None: return undist
+        
+        # Create an image to draw the lines on
+        warp_zero = np.zeros_like(warped).astype(np.uint8)
+        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+        # Recast the x and y points into usable format for cv2.fillPoly()
+        pts_left = np.array([np.transpose(np.vstack([self.left_fitx, self.ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([self.right_fitx, self.ploty])))])
+        pts = np.hstack((pts_left, pts_right))
+        
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(color_warp, np.int_([pts]), (0,255, 0))
+
+        # Warp the blank back to original image space using inverse perspective matrix (Minv)
+        newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0])) 
+        # Combine the result with the original image
+        result = cv2.addWeighted(undist, 1, newwarp, 0.3, 0)
+        #find offset
+        midpoint = np.int(undist.shape[1]/2)
+        middle_of_lane = (self.right_fitx[-1] - self.left_fitx[-1]) / 2.0 + self.left_fitx[-1]
+        offset = (midpoint - middle_of_lane) * self.xm_per_pix
     
         #find offset
         midpoint = np.int(undist.shape[1]/2)
@@ -208,6 +282,7 @@ def process_image(self, img):
         cv2.putText(result,"C. Position: " + "{:0.2f}".format(offset) + 'm', org=(50,150), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
                 fontScale=1, color=(255,255,255), lineType = cv2.LINE_AA, thickness=2)
         return result
+       
 
 def main():
 
