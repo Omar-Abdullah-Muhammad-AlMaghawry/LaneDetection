@@ -345,7 +345,7 @@ def process_image(self, img):
 def main():
 
     # initialize a lane object
-    calib_params = calibrate_camera()
+    # calib_params = calibrate_camera()
     lane = Lane()
 
     # perform the video test
