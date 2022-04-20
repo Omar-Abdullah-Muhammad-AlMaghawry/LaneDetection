@@ -140,4 +140,101 @@ class Lane():
         righty = nonzeroy[right_lane_inds]
 
         # Fit new polynomials
-        self.fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)    
+        self.fit_poly(binary_warped.shape, leftx, lefty, rightx, righty)  
+        
+        
+def merge_image(background, overlay, x, y):
+
+    background_width = background.shape[1]
+    background_height = background.shape[0]
+
+    if x >= background_width or y >= background_height:
+        return background
+
+    h, w = overlay.shape[0], overlay.shape[1]
+
+    if x + w > background_width:
+        w = background_width - x
+        overlay = overlay[:, :w]
+
+    if y + h > background_height:
+        h = background_height - y
+        overlay = overlay[:h]
+
+    if overlay.shape[2] < 4:
+        overlay = np.concatenate(
+            [
+                overlay,
+                np.ones((overlay.shape[0], overlay.shape[1], 1), dtype = overlay.dtype) * 255
+            ],
+            axis = 2,
+        )
+
+    overlay_image = overlay[..., :3]
+    mask = overlay[..., 3:] / 255.0
+
+    background[y:y+h, x:x+w] = (1.0 - mask) * background[y:y+h, x:x+w] + mask * overlay_image
+
+    return background
+
+        ##################################################
+def process_image(self, img):
+########### PUT FULL FUNCTION
+    
+    
+        #find offset
+        midpoint = np.int(undist.shape[1]/2)
+        middle_of_lane = (self.right_fitx[-1] - self.left_fitx[-1]) / 2.0 + self.left_fitx[-1]
+        offset = (midpoint - middle_of_lane) * self.xm_per_pix
+        
+        resized1 = cv2.resize(w, (200,200), interpolation = cv2.INTER_AREA)
+        resized2 = cv2.resize(undist, (200,200), interpolation = cv2.INTER_AREA)
+        resized3 = cv2.resize(warped, (200,200), interpolation = cv2.INTER_AREA)
+        resized3 = cv2.merge([resized3*255,resized3*255,resized3*255])
+        resized4 = cv2.resize(self.out_img, (200,200), interpolation = cv2.INTER_AREA)
+
+        if len(sys.argv) > 1:
+            if sys.argv[1] == "debug":
+                result = merge_image(result, resized2, 500,25)
+                result = merge_image(result, resized1, 700,25)
+                result = merge_image(result, resized3, 900,25)
+                result = merge_image(result, resized4, 1100,25)
+        
+        # Add radius and offset calculations to top of video
+        cv2.putText(result,"L. Lane Radius: " + "{:0.2f}".format(self.left_curverad/1000) + 'km', org=(50,50), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1, color=(255,255,255), lineType = cv2.LINE_AA, thickness=2)
+        cv2.putText(result,"R. Lane Radius: " + "{:0.2f}".format(self.right_curverad/1000) + 'km', org=(50,100), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1, color=(255,255,255), lineType = cv2.LINE_AA, thickness=2)
+        cv2.putText(result,"C. Position: " + "{:0.2f}".format(offset) + 'm', org=(50,150), fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                fontScale=1, color=(255,255,255), lineType = cv2.LINE_AA, thickness=2)
+        return result
+
+def main():
+
+    # initialize a lane object
+    calib_params = calibrate_camera()
+    lane = Lane()
+
+    # perform the video test
+    white_output = 'project1_video_output.mp4'
+    if len(sys.argv) > 2:
+        path = sys.argv[2]
+    else:
+        path = "Project_data/challenge_video.mp4"
+
+    if len(sys.argv) > 3:
+        white_output = sys.argv[3]
+    else:
+        white_output = "Project_data/output.mp4"
+    clip1 = VideoFileClip(path)
+    white_clip = clip1.fl_image(lane.process_image) #NOTE: this function expects color images!!
+    white_clip.write_videofile(white_output, audio=False)
+    HTML("""
+    <video width="860" height="540" controls>
+    <source src="{0}">
+    </video>
+    """.format(white_output))
+    print ("................................")
+
+if __name__ == "__main__":
+   main()
