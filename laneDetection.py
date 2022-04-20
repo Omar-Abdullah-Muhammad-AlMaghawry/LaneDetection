@@ -85,7 +85,8 @@ def binary_warper(img):
         
     return combined_binary, Minv, undist, warped 
 
-#######Some test for functions of camera cal, and binary threshol 
+#######Some test for functions of camera cal, binary threshold and lane dectection methods##
+####like poly fit, window boxes, and refine polyfit#########################################
 # def calibrate_camera():
 #     objpoints = []
 #     imgpoints = []
@@ -353,6 +354,7 @@ def binary_warper(img):
 #         warpped  = warp(compined,M)
 
 #     return warpped
+
 #######Some tests for the lane detection#########
 # def laneHisto(img, heightS=800, heightE = 1250):
 #     histogram = np.sum(img[int(heightS):int(heightE),:], axis = 0)
