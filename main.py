@@ -569,18 +569,18 @@ def main():
 
     # projectOutput = 'Project_data/project_video_output.mp4'
 
-    if len(sys.argv) > 2:
-        inputVideoPath = sys.argv[2]
+    if len(sys.argv) > 1:
+        inputVideoPath = sys.argv[1]
     else:
         inputVideoPath = "Project_data/project_video.mp4"
 
-    if len(sys.argv) > 3:
-        projectOutput = sys.argv[3]
+    if len(sys.argv) > 2:
+        projectOutput = sys.argv[2]
     else:
         projectOutput = "Project_data/output.mp4"
 
-    if len(sys.argv) > 4:
-        deubug = int(sys.argv[4])
+    if len(sys.argv) > 3:
+        deubug = int(sys.argv[3])
     else:
         deubug = 1
 
