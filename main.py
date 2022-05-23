@@ -579,10 +579,10 @@ def main():
     else:
         projectOutput = "Project_data/output.mp4"
 
-    # if len(sys.argv) > 4:
-    #     deubug = int(sys.argv[4])
-    # else:
-    #     deubug = 1
+    if len(sys.argv) > 4:
+        deubug = int(sys.argv[4])
+    else:
+        deubug = 1
 
 
 
