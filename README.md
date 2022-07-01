@@ -1,4 +1,4 @@
-# LaneDetection
+# Lane Detection
 ## To Detect the lane on the video we just command : 
 ### bash run.sh <1st> <2nd> <3rd>
 ### 1st : debug or nodebug
