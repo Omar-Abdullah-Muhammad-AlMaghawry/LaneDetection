@@ -11,4 +11,4 @@ pip install skimage
 pip install joblib
 
 
-python3 detect_vehicles.py $1 $2 $3
+python3 main.py $1 $2 $3
